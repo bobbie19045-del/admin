@@ -6,7 +6,7 @@
     <title>Paadhai Hub | Admin Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script> <!-- Important: Load config -->
+    <script src="config.js"></script>
     
     <style>
         :root {
@@ -72,6 +72,14 @@
         input, select { width: 100%; background: #0a0a0a; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 6px; outline: none; transition: 0.3s; }
         input:focus, select:focus { border-color: var(--accent); }
 
+        /* Custom File Upload Styling */
+        .file-upload-wrapper { position: relative; width: 100%; height: 100px; border: 2px dashed #444; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #151515; transition: 0.3s; cursor: pointer; }
+        .file-upload-wrapper:hover { border-color: var(--accent); background: #1a1a1a; }
+        .file-upload-label { text-align: center; color: #888; pointer-events: none; }
+        .file-upload-label i { font-size: 24px; display: block; margin-bottom: 5px; color: var(--accent); }
+        .file-upload-label span { font-size: 12px; }
+        .file-preview { display: none; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+        
         /* Table */
         .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
@@ -93,7 +101,7 @@
     <div id="login-overlay">
         <div class="login-box">
             <div class="logo" style="justify-content: center; margin-bottom: 25px; display: flex;">
-                <span class="white-text">Paadhai</span><span class="orange-box">Hub</span>
+                <span class="white-text">Paddhai</span><span class="orange-box">Hub</span>
             </div>
             <h3 style="color:#fff; margin-bottom: 20px;">Admin Access</h3>
             <form id="login-form">
@@ -113,6 +121,10 @@
             </div>
             <form id="edit-book-form" class="form-grid" style="padding:0; grid-template-columns: 1fr;">
                 <input type="hidden" name="id" id="edit-id">
+                
+                <!-- Hidden input to store existing URL if no new file is uploaded -->
+                <input type="hidden" id="edit-existing-url">
+
                 <div>
                     <label>Book Title</label>
                     <input type="text" name="title" id="edit-title" required>
@@ -143,10 +155,19 @@
                     <label>Price (₹)</label>
                     <input type="number" name="price" id="edit-price" required>
                 </div>
+                
+                <!-- File Upload for Edit -->
                 <div>
-                    <label>Image URL</label>
-                    <input type="url" name="img_url" id="edit-img_url">
+                    <label>Update Image (Optional)</label>
+                    <div class="file-upload-wrapper" onclick="document.getElementById('edit-file').click()">
+                        <input type="file" id="edit-file" accept="image/*" hidden onchange="previewFile(this, 'edit-preview-label')">
+                        <div class="file-upload-label" id="edit-preview-label">
+                            <i class="ri-upload-cloud-line"></i>
+                            <span>Click to replace image</span>
+                        </div>
+                    </div>
                 </div>
+
                 <button type="submit" class="btn btn-primary" style="margin-top: 10px; justify-content: center;">Update Book</button>
             </form>
         </div>
@@ -159,7 +180,7 @@
         <header>
             <div class="container header-content">
                 <div class="logo">
-                    <span class="white-text">Paadhai</span><span class="orange-box">Hub</span>
+                    <span class="white-text">Paddhai</span><span class="orange-box">Hub</span>
                 </div>
                 <div style="display: flex; align-items: center;">
                     <span id="role-badge" class="badge">Loading...</span>
@@ -176,7 +197,7 @@
                     <h1 style="font-size: 28px; margin-bottom: 5px;">Dashboard Overview</h1>
                     <p style="color: var(--text-sec); font-size: 14px;">Manage inventory and track sales performance.</p>
                 </div>
-                <button onclick="initializeDashboard()" class="btn" style="background: #222; color: #fff; border: 1px solid #333;">
+                <button onclick="fetchData()" class="btn" style="background: #222; color: #fff; border: 1px solid #333;">
                     <i class="ri-refresh-line"></i> Refresh Data
                 </button>
             </div>
@@ -227,10 +248,19 @@
                         <label>Price (₹)</label>
                         <input type="number" name="price" value="99" required>
                     </div>
+                    
+                    <!-- New File Upload UI -->
                     <div>
-                        <label>Cover Image URL</label>
-                        <input type="url" name="img_url" placeholder="https://...">
+                        <label>Upload Cover Image</label>
+                        <div class="file-upload-wrapper" onclick="document.getElementById('add-file').click()">
+                            <input type="file" id="add-file" accept="image/*" hidden required onchange="previewFile(this, 'add-preview-label')">
+                            <div class="file-upload-label" id="add-preview-label">
+                                <i class="ri-upload-cloud-line"></i>
+                                <span>Click to choose file</span>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="full-width" style="margin-top: 10px;">
                         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
                             Add to Inventory
@@ -239,7 +269,7 @@
                 </form>
             </div>
 
-            <!-- MANAGE INVENTORY (New Section) -->
+            <!-- MANAGE INVENTORY -->
             <div class="admin-section">
                 <div class="section-header">
                     <h2><i class="ri-edit-box-line" style="color: #4da6ff;"></i> Manage Inventory</h2>
@@ -261,12 +291,10 @@
                 </div>
             </div>
 
-            <!-- Sales Table (Super Admin Only) -->
+            <!-- Sales Table -->
             <div id="sensitive-section" class="admin-section hidden">
                 <div class="section-header">
                     <h2><i class="ri-secure-payment-fill" style="color: #4CAF50;"></i> Recent Transactions</h2>
-                    
-                    <!-- RESET DATA BUTTON -->
                     <button onclick="resetSalesData()" class="btn btn-danger" style="font-size: 12px; padding: 6px 12px;">
                         <i class="ri-delete-bin-line"></i> Reset Sales Data
                     </button>
@@ -294,7 +322,6 @@
 
     <!-- JS Logic -->
     <script>
-        // --- CONFIGURATION ---
 // --- SUPABASE CONFIGURATION ---
 const SUPABASE_URL = 'https://kooylsdmfsxqeejcwefp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvb3lsc2RtZnN4cWVlamN3ZWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzMzNjksImV4cCI6MjA4Mjc0OTM2OX0.PA4U9v_t70c4n5sZhKIqTSe2jxxMeStLTdgax-19BHA';
@@ -302,25 +329,23 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let CURRENT_ROLE = null;
-        let ALL_BOOKS = []; // Store locally for editing
+        let ALL_BOOKS = [];
 
-        // --- LOGIN ---
+        // --- AUTH ---
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const pass = document.getElementById('admin-pass').value;
             const btn = this.querySelector('button');
             const errorMsg = document.getElementById('login-error');
 
-            btn.innerText = 'Verifying...';
-            btn.disabled = true;
+            btn.innerText = 'Verifying...'; btn.disabled = true;
             errorMsg.classList.add('hidden');
 
             const { data: role, error } = await supabaseClient.rpc('check_admin_access', { input_pass: pass });
 
             if (error || !role) {
                 errorMsg.classList.remove('hidden');
-                btn.innerText = 'Authenticate';
-                btn.disabled = false;
+                btn.innerText = 'Authenticate'; btn.disabled = false;
             } else {
                 CURRENT_ROLE = role;
                 initializeDashboard();
@@ -333,30 +358,22 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
             const badge = document.getElementById('role-badge');
             if(CURRENT_ROLE === 'super_admin') {
-                badge.innerText = 'Super Admin';
-                badge.classList.add('badge-super');
+                badge.innerText = 'Super Admin'; badge.classList.add('badge-super');
             } else {
-                badge.innerText = 'Editor';
-                badge.classList.add('badge-editor');
+                badge.innerText = 'Editor'; badge.classList.add('badge-editor');
             }
-
             fetchData();
         }
 
         async function fetchData() {
-            // 1. Fetch Orders
-            const { data: orders, error: orderErr } = await supabaseClient
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false });
-
+            // Orders
+            const { data: orders, error: orderErr } = await supabaseClient.from('orders').select('*').order('created_at', { ascending: false });
             if (!orderErr) {
                 let totalRev = 0;
                 orders.forEach(o => totalRev += (o.amount || 0));
                 document.getElementById('total-count').innerText = orders.length;
                 document.getElementById('total-revenue').innerText = '₹' + totalRev.toLocaleString('en-IN');
-
-                // Table Visibility
+                
                 if (CURRENT_ROLE === 'super_admin') {
                     document.getElementById('sensitive-section').classList.remove('hidden');
                     renderSalesTable(orders);
@@ -365,95 +382,92 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 }
             }
 
-            // 2. Fetch Books for Inventory List
-            const { data: books, error: bookErr } = await supabaseClient
-                .from('books')
-                .select('*')
-                .order('id', { ascending: false });
-
+            // Books
+            const { data: books, error: bookErr } = await supabaseClient.from('books').select('*').order('id', { ascending: false });
             if (!bookErr) {
                 ALL_BOOKS = books;
                 renderInventoryTable(books);
             }
         }
 
-        // --- RENDER TABLES ---
         function renderSalesTable(orders) {
             const tbody = document.getElementById('orders-body');
             tbody.innerHTML = '';
-            if(orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#666;">No sales records found.</td></tr>';
-                return;
-            }
+            if(orders.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#666;">No sales.</td></tr>'; return; }
             orders.forEach(order => {
                 const date = new Date(order.created_at).toLocaleDateString();
-                const row = `
-                    <tr>
-                        <td style="color: #888;">${date}</td>
-                        <td><div style="font-weight: 500;">${order.customer_name}</div><div style="font-size: 12px; color: #666;">${order.customer_email}</div></td>
-                        <td>${order.book_title}</td>
-                        <td>${order.customer_phone}</td>
-                        <td class="price-cell">₹${order.amount}</td>
-                    </tr>`;
-                tbody.innerHTML += row;
+                tbody.innerHTML += `<tr><td style="color:#888;">${date}</td><td><div>${order.customer_name}</div><div style="font-size:11px; color:#666;">${order.customer_email}</div></td><td>${order.book_title}</td><td>${order.customer_phone}</td><td class="price-cell">₹${order.amount}</td></tr>`;
             });
         }
 
         function renderInventoryTable(books) {
             const tbody = document.getElementById('books-body');
             tbody.innerHTML = '';
-            if(books.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px; color:#666;">Inventory is empty.</td></tr>';
-                return;
-            }
+            if(books.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#666;">Inventory empty.</td></tr>'; return; }
             books.forEach(book => {
-                // Both Roles can see Edit/Delete buttons
-                const row = `
-                    <tr>
-                        <td><div style="font-weight:bold;">${book.title}</div></td>
-                        <td><span style="background:#333; padding:2px 6px; border-radius:4px; font-size:11px;">${book.subject}</span> Class ${book.class}</td>
-                        <td class="price-cell">₹${book.price}</td>
-                        <td style="text-align:right;">
-                            <button onclick="openEditModal(${book.id})" class="btn btn-secondary btn-sm" style="margin-right:5px;"><i class="ri-pencil-line"></i></button>
-                            <button onclick="deleteBook(${book.id})" class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i></button>
-                        </td>
-                    </tr>`;
-                tbody.innerHTML += row;
+                tbody.innerHTML += `<tr><td><div style="font-weight:bold;">${book.title}</div></td><td><span style="background:#333; padding:2px 6px; border-radius:4px; font-size:11px;">${book.subject}</span> Class ${book.class}</td><td class="price-cell">₹${book.price}</td><td style="text-align:right;"><button onclick="openEditModal(${book.id})" class="btn btn-secondary btn-sm" style="margin-right:5px;"><i class="ri-pencil-line"></i></button><button onclick="deleteBook(${book.id})" class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i></button></td></tr>`;
             });
+        }
+
+        // --- FILE HELPER ---
+        function previewFile(input, labelId) {
+            const label = document.getElementById(labelId);
+            if(input.files && input.files[0]) {
+                label.innerHTML = `<span style="color:var(--accent);">${input.files[0].name}</span>`;
+            }
+        }
+
+        async function uploadImage(file) {
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`; // Clean filename
+            const { data, error } = await supabaseClient.storage.from('covers').upload(fileName, file);
+            
+            if(error) throw error;
+            
+            const { data: urlData } = supabaseClient.storage.from('covers').getPublicUrl(fileName);
+            return urlData.publicUrl;
         }
 
         // --- ADD BOOK ---
         document.getElementById('add-book-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
-            btn.innerText = 'Adding...'; btn.disabled = true;
+            const fileInput = document.getElementById('add-file');
+            
+            btn.innerText = 'Uploading...'; btn.disabled = true;
 
-            const formData = new FormData(this);
-            const newBook = {
-                title: formData.get('title'),
-                subject: formData.get('subject'),
-                class: formData.get('class'),
-                price: parseInt(formData.get('price')),
-                img_url: formData.get('img_url') || 'https://placehold.co/400x500?text=No+Image'
-            };
+            try {
+                // 1. Upload Image
+                let imgUrl = 'https://placehold.co/400x500?text=No+Image';
+                if(fileInput.files.length > 0) {
+                    imgUrl = await uploadImage(fileInput.files[0]);
+                }
 
-            const { error } = await supabaseClient.from('books').insert(newBook);
-            if (error) alert('Error: ' + error.message);
-            else { alert('Book added!'); this.reset(); fetchData(); }
-            btn.innerText = 'Add to Inventory'; btn.disabled = false;
+                // 2. Save Data
+                const formData = new FormData(this);
+                const newBook = {
+                    title: formData.get('title'),
+                    subject: formData.get('subject'),
+                    class: formData.get('class'),
+                    price: parseInt(formData.get('price')),
+                    img_url: imgUrl
+                };
+
+                const { error } = await supabaseClient.from('books').insert(newBook);
+                if (error) throw error;
+
+                alert('Book added successfully!');
+                this.reset();
+                document.getElementById('add-preview-label').innerHTML = `<i class="ri-upload-cloud-line"></i><span>Click to choose file</span>`;
+                fetchData();
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.innerText = 'Add to Inventory'; btn.disabled = false;
+            }
         });
 
-        // --- DELETE BOOK ---
-        async function deleteBook(id) {
-            if(!confirm("Are you sure you want to delete this book?")) return;
-            
-            const { error } = await supabaseClient.from('books').delete().eq('id', id);
-            
-            if(error) alert("Error deleting: " + error.message);
-            else fetchData(); // Refresh list
-        }
-
-        // --- EDIT BOOK (Modal Logic) ---
+        // --- EDIT BOOK ---
         function openEditModal(id) {
             const book = ALL_BOOKS.find(b => b.id === id);
             if(!book) return;
@@ -463,42 +477,64 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             document.getElementById('edit-subject').value = book.subject;
             document.getElementById('edit-class').value = book.class;
             document.getElementById('edit-price').value = book.price;
-            document.getElementById('edit-img_url').value = book.img_url;
-
+            document.getElementById('edit-existing-url').value = book.img_url;
+            
+            // Reset file label
+            document.getElementById('edit-preview-label').innerHTML = `<i class="ri-upload-cloud-line"></i><span>Click to replace image</span>`;
             document.getElementById('edit-modal').style.display = 'flex';
         }
 
-        function closeEditModal() {
-            document.getElementById('edit-modal').style.display = 'none';
-        }
+        function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
 
         document.getElementById('edit-book-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const btn = this.querySelector('button');
+            const btn = this.querySelector('button[type="submit"]');
+            const fileInput = document.getElementById('edit-file');
+            
             btn.innerText = 'Updating...'; btn.disabled = true;
 
-            const id = document.getElementById('edit-id').value;
-            const updates = {
-                title: document.getElementById('edit-title').value,
-                subject: document.getElementById('edit-subject').value,
-                class: document.getElementById('edit-class').value,
-                price: parseInt(document.getElementById('edit-price').value),
-                img_url: document.getElementById('edit-img_url').value
-            };
+            try {
+                let imgUrl = document.getElementById('edit-existing-url').value;
+                
+                // If new file selected, upload it
+                if(fileInput.files.length > 0) {
+                    imgUrl = await uploadImage(fileInput.files[0]);
+                }
 
-            const { error } = await supabaseClient.from('books').update(updates).eq('id', id);
+                const id = document.getElementById('edit-id').value;
+                const updates = {
+                    title: document.getElementById('edit-title').value,
+                    subject: document.getElementById('edit-subject').value,
+                    class: document.getElementById('edit-class').value,
+                    price: parseInt(document.getElementById('edit-price').value),
+                    img_url: imgUrl
+                };
 
-            if(error) alert("Error updating: " + error.message);
-            else { closeEditModal(); fetchData(); }
+                const { error } = await supabaseClient.from('books').update(updates).eq('id', id);
+                if(error) throw error;
 
-            btn.innerText = 'Update Book'; btn.disabled = false;
+                closeEditModal();
+                fetchData();
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.innerText = 'Update Book'; btn.disabled = false;
+            }
         });
 
-        // --- RESET SALES DATA (Super Admin Only) ---
+        // --- DELETE BOOK ---
+        async function deleteBook(id) {
+            if(!confirm("Delete this book?")) return;
+            const { error } = await supabaseClient.from('books').delete().eq('id', id);
+            if(error) alert("Error: " + error.message);
+            else fetchData();
+        }
+
+        // --- RESET DATA ---
         async function resetSalesData() {
             if(CURRENT_ROLE !== 'super_admin') return;
-            if(!confirm("Are you sure you want to delete ALL sales history?")) return;
-
+            if(!confirm("Wipe ALL sales history?")) return;
             const { error } = await supabaseClient.from('orders').delete().neq('id', 0);
             if(error) alert("Error: " + error.message);
             else { alert("Sales history wiped."); fetchData(); }

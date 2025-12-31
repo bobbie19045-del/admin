@@ -6,7 +6,7 @@
     <title>Paadhai Hub | Admin Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script> <!-- Important: Load config -->
     
     <style>
         :root {
@@ -26,6 +26,10 @@
         #login-overlay { position: fixed; inset: 0; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; }
         .login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 400px; text-align: center; }
         
+        /* Edit Modal Overlay */
+        #edit-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 900; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-box { background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 90%; max-width: 500px; }
+
         /* Layout */
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; width: 100%; }
         
@@ -44,6 +48,8 @@
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-danger { background: transparent; color: #ff4444; border: 1px solid #ff4444; }
         .btn-danger:hover { background: #ff4444; color: #fff; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-secondary { background: #333; color: #fff; }
         .logout-btn { color: #888; background: none; border: none; cursor: pointer; font-size: 14px; }
         .logout-btn:hover { color: #fff; }
 
@@ -67,11 +73,10 @@
         input:focus, select:focus { border-color: var(--accent); }
 
         /* Table */
-        .table-wrapper { overflow-x: auto; }
+        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-        th { background: #151515; color: var(--text-sec); padding: 15px; font-weight: 500; border-bottom: 1px solid var(--border); }
+        th { background: #151515; color: var(--text-sec); padding: 15px; font-weight: 500; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
         td { padding: 15px; border-bottom: 1px solid #2a2a2a; color: #eee; }
-        tr:last-child td { border-bottom: none; }
         tr:hover { background: #252525; }
         .price-cell { color: var(--accent); font-weight: bold; font-family: monospace; font-size: 15px; text-align: right; }
         
@@ -88,7 +93,7 @@
     <div id="login-overlay">
         <div class="login-box">
             <div class="logo" style="justify-content: center; margin-bottom: 25px; display: flex;">
-                <span class="white-text">Paddhai</span><span class="orange-box">Hub</span>
+                <span class="white-text">Paadhai</span><span class="orange-box">Hub</span>
             </div>
             <h3 style="color:#fff; margin-bottom: 20px;">Admin Access</h3>
             <form id="login-form">
@@ -99,14 +104,62 @@
         </div>
     </div>
 
-    <!-- 2. ADMIN DASHBOARD -->
+    <!-- 2. EDIT MODAL -->
+    <div id="edit-modal">
+        <div class="modal-box">
+            <div class="section-header" style="padding: 0 0 20px 0; margin-bottom: 20px;">
+                <h2>Edit Book</h2>
+                <button onclick="closeEditModal()" class="btn btn-secondary btn-sm"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="edit-book-form" class="form-grid" style="padding:0; grid-template-columns: 1fr;">
+                <input type="hidden" name="id" id="edit-id">
+                <div>
+                    <label>Book Title</label>
+                    <input type="text" name="title" id="edit-title" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Subject</label>
+                        <select name="subject" id="edit-subject" required>
+                            <option value="math">Mathematics</option>
+                            <option value="science">Science</option>
+                            <option value="sst">Social Science</option>
+                            <option value="english">English</option>
+                            <option value="hindi">Hindi</option>
+                            <option value="punjabi">Punjabi</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Class</label>
+                        <select name="class" id="edit-class" required>
+                            <option value="9">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" id="edit-price" required>
+                </div>
+                <div>
+                    <label>Image URL</label>
+                    <input type="url" name="img_url" id="edit-img_url">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px; justify-content: center;">Update Book</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. MAIN DASHBOARD -->
     <div id="main-dashboard" class="hidden">
         
         <!-- Navbar -->
         <header>
             <div class="container header-content">
                 <div class="logo">
-                    <span class="white-text">Paddhai</span><span class="orange-box">Hub</span>
+                    <span class="white-text">Paadhai</span><span class="orange-box">Hub</span>
                 </div>
                 <div style="display: flex; align-items: center;">
                     <span id="role-badge" class="badge">Loading...</span>
@@ -123,7 +176,7 @@
                     <h1 style="font-size: 28px; margin-bottom: 5px;">Dashboard Overview</h1>
                     <p style="color: var(--text-sec); font-size: 14px;">Manage inventory and track sales performance.</p>
                 </div>
-                <button onclick="fetchData()" class="btn" style="background: #222; color: #fff; border: 1px solid #333;">
+                <button onclick="initializeDashboard()" class="btn" style="background: #222; color: #fff; border: 1px solid #333;">
                     <i class="ri-refresh-line"></i> Refresh Data
                 </button>
             </div>
@@ -186,6 +239,28 @@
                 </form>
             </div>
 
+            <!-- MANAGE INVENTORY (New Section) -->
+            <div class="admin-section">
+                <div class="section-header">
+                    <h2><i class="ri-edit-box-line" style="color: #4da6ff;"></i> Manage Inventory</h2>
+                </div>
+                <div class="table-wrapper">
+                    <table width="100%">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Sub / Class</th>
+                                <th style="text-align:right;">Price</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="books-body">
+                            <!-- Books injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Sales Table (Super Admin Only) -->
             <div id="sensitive-section" class="admin-section hidden">
                 <div class="section-header">
@@ -208,7 +283,7 @@
                             </tr>
                         </thead>
                         <tbody id="orders-body">
-                            <!-- JS will inject rows here -->
+                            <!-- Orders injected here -->
                         </tbody>
                     </table>
                 </div>
@@ -220,11 +295,14 @@
     <!-- JS Logic -->
     <script>
         // --- CONFIGURATION ---
+// --- SUPABASE CONFIGURATION ---
 const SUPABASE_URL = 'https://kooylsdmfsxqeejcwefp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvb3lsc2RtZnN4cWVlamN3ZWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzMzNjksImV4cCI6MjA4Mjc0OTM2OX0.PA4U9v_t70c4n5sZhKIqTSe2jxxMeStLTdgax-19BHA';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// FIX: We named this 'supabaseClient' instead of 'supabase' to avoid the name conflict
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let CURRENT_ROLE = null;
+        let ALL_BOOKS = []; // Store locally for editing
 
         // --- LOGIN ---
         document.getElementById('login-form').addEventListener('submit', async function(e) {
@@ -266,51 +344,80 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
         }
 
         async function fetchData() {
-            const { data, error } = await supabaseClient
+            // 1. Fetch Orders
+            const { data: orders, error: orderErr } = await supabaseClient
                 .from('orders')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) { console.error(error); return; }
+            if (!orderErr) {
+                let totalRev = 0;
+                orders.forEach(o => totalRev += (o.amount || 0));
+                document.getElementById('total-count').innerText = orders.length;
+                document.getElementById('total-revenue').innerText = '₹' + totalRev.toLocaleString('en-IN');
 
-            // 1. Totals (Visible to all)
-            let totalRev = 0;
-            data.forEach(o => totalRev += (o.amount || 0));
-            document.getElementById('total-count').innerText = data.length;
-            document.getElementById('total-revenue').innerText = '₹' + totalRev.toLocaleString('en-IN');
+                // Table Visibility
+                if (CURRENT_ROLE === 'super_admin') {
+                    document.getElementById('sensitive-section').classList.remove('hidden');
+                    renderSalesTable(orders);
+                } else {
+                    document.getElementById('sensitive-section').classList.add('hidden');
+                }
+            }
 
-            // 2. Table Visibility (Super Admin Only)
-            if (CURRENT_ROLE === 'super_admin') {
-                document.getElementById('sensitive-section').classList.remove('hidden');
-                renderTable(data);
-            } else {
-                document.getElementById('sensitive-section').classList.add('hidden');
+            // 2. Fetch Books for Inventory List
+            const { data: books, error: bookErr } = await supabaseClient
+                .from('books')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (!bookErr) {
+                ALL_BOOKS = books;
+                renderInventoryTable(books);
             }
         }
 
-        function renderTable(orders) {
+        // --- RENDER TABLES ---
+        function renderSalesTable(orders) {
             const tbody = document.getElementById('orders-body');
             tbody.innerHTML = '';
-            
             if(orders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px; color:#666;">No sales records found.</td></tr>';
                 return;
             }
-
             orders.forEach(order => {
                 const date = new Date(order.created_at).toLocaleDateString();
                 const row = `
                     <tr>
                         <td style="color: #888;">${date}</td>
-                        <td>
-                            <div style="font-weight: 500;">${order.customer_name}</div>
-                            <div style="font-size: 12px; color: #666;">${order.customer_email}</div>
-                        </td>
+                        <td><div style="font-weight: 500;">${order.customer_name}</div><div style="font-size: 12px; color: #666;">${order.customer_email}</div></td>
                         <td>${order.book_title}</td>
                         <td>${order.customer_phone}</td>
                         <td class="price-cell">₹${order.amount}</td>
-                    </tr>
-                `;
+                    </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function renderInventoryTable(books) {
+            const tbody = document.getElementById('books-body');
+            tbody.innerHTML = '';
+            if(books.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px; color:#666;">Inventory is empty.</td></tr>';
+                return;
+            }
+            books.forEach(book => {
+                // Both Roles can see Edit/Delete buttons
+                const row = `
+                    <tr>
+                        <td><div style="font-weight:bold;">${book.title}</div></td>
+                        <td><span style="background:#333; padding:2px 6px; border-radius:4px; font-size:11px;">${book.subject}</span> Class ${book.class}</td>
+                        <td class="price-cell">₹${book.price}</td>
+                        <td style="text-align:right;">
+                            <button onclick="openEditModal(${book.id})" class="btn btn-secondary btn-sm" style="margin-right:5px;"><i class="ri-pencil-line"></i></button>
+                            <button onclick="deleteBook(${book.id})" class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i></button>
+                        </td>
+                    </tr>`;
                 tbody.innerHTML += row;
             });
         }
@@ -319,9 +426,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
         document.getElementById('add-book-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
-            const originalText = btn.innerText;
-            btn.innerText = 'Adding...';
-            btn.disabled = true;
+            btn.innerText = 'Adding...'; btn.disabled = true;
 
             const formData = new FormData(this);
             const newBook = {
@@ -333,36 +438,70 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
             };
 
             const { error } = await supabaseClient.from('books').insert(newBook);
-
-            if (error) {
-                alert('Error: ' + error.message);
-            } else {
-                alert('Success! Book added.');
-                this.reset();
-            }
-            btn.innerText = originalText;
-            btn.disabled = false;
+            if (error) alert('Error: ' + error.message);
+            else { alert('Book added!'); this.reset(); fetchData(); }
+            btn.innerText = 'Add to Inventory'; btn.disabled = false;
         });
 
-        // --- RESET DATA (Super Admin Only) ---
+        // --- DELETE BOOK ---
+        async function deleteBook(id) {
+            if(!confirm("Are you sure you want to delete this book?")) return;
+            
+            const { error } = await supabaseClient.from('books').delete().eq('id', id);
+            
+            if(error) alert("Error deleting: " + error.message);
+            else fetchData(); // Refresh list
+        }
+
+        // --- EDIT BOOK (Modal Logic) ---
+        function openEditModal(id) {
+            const book = ALL_BOOKS.find(b => b.id === id);
+            if(!book) return;
+
+            document.getElementById('edit-id').value = book.id;
+            document.getElementById('edit-title').value = book.title;
+            document.getElementById('edit-subject').value = book.subject;
+            document.getElementById('edit-class').value = book.class;
+            document.getElementById('edit-price').value = book.price;
+            document.getElementById('edit-img_url').value = book.img_url;
+
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        document.getElementById('edit-book-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            btn.innerText = 'Updating...'; btn.disabled = true;
+
+            const id = document.getElementById('edit-id').value;
+            const updates = {
+                title: document.getElementById('edit-title').value,
+                subject: document.getElementById('edit-subject').value,
+                class: document.getElementById('edit-class').value,
+                price: parseInt(document.getElementById('edit-price').value),
+                img_url: document.getElementById('edit-img_url').value
+            };
+
+            const { error } = await supabaseClient.from('books').update(updates).eq('id', id);
+
+            if(error) alert("Error updating: " + error.message);
+            else { closeEditModal(); fetchData(); }
+
+            btn.innerText = 'Update Book'; btn.disabled = false;
+        });
+
+        // --- RESET SALES DATA (Super Admin Only) ---
         async function resetSalesData() {
             if(CURRENT_ROLE !== 'super_admin') return;
+            if(!confirm("Are you sure you want to delete ALL sales history?")) return;
 
-            const confirmReset = confirm("Are you sure you want to delete ALL sales history? This cannot be undone.");
-            if(!confirmReset) return;
-
-            // Delete all rows from 'orders'
-            const { error } = await supabaseClient
-                .from('orders')
-                .delete()
-                .neq('id', 0); // Hack to delete all rows (where id is not 0)
-
-            if(error) {
-                alert("Error deleting data: " + error.message);
-            } else {
-                alert("All sales data has been wiped.");
-                fetchData(); // Refresh view
-            }
+            const { error } = await supabaseClient.from('orders').delete().neq('id', 0);
+            if(error) alert("Error: " + error.message);
+            else { alert("Sales history wiped."); fetchData(); }
         }
     </script>
 </body>

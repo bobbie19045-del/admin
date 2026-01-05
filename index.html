@@ -162,7 +162,10 @@
     </div>
 
     <script>
-        const supabaseClient = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+        const SUPABASE_URL = 'https://kooylsdmfsxqeejcwefp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvb3lsc2RtZnN4cWVlamN3ZWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzMzNjksImV4cCI6MjA4Mjc0OTM2OX0.PA4U9v_t70c4n5sZhKIqTSe2jxxMeStLTdgax-19BHA';
+// FIX: We named this 'supabaseClient' instead of 'supabase' to avoid the name conflict
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let CURRENT_ROLE = null;
         let ALL_BOOKS = [];
 

@@ -176,7 +176,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const currentStyle = data ? data.setting_value : 'default';
             
             // 2. Toggle
-            const newStyle = currentStyle === 'default' ? 'dark' : 'default';
+            const newStyle = currentStyle === 'default' ? 'real' : 'default';
 
             // 3. Update Supabase
             const { error } = await supabaseClient.from('site_settings').update({ setting_value: newStyle }).eq('setting_key', 'logo_style');
